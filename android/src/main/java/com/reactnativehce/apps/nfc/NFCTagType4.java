@@ -26,8 +26,18 @@ public class NFCTagType4 implements IHCEApplication {
   private final HceViewModel hceModel;
 
   private SelectedFile selectedFile = null;
-  public final byte[] ndefDataBuffer = new byte[0x80FE];
-  public final byte[] ccDataBuffer = new byte[15];
+  public final byte[] ndefDataBuffer = new byte[0x7FFF];
+  public final byte[] ccDataBuffer = new byte[] {
+      0x00, 0x0f, // CCLEN
+      0x20, // Mapping Version
+      0x00, 0x3b, // Maximum R-APDU data size
+      0x00, 0x34, // Maximum C-APDU data size
+      0x04, 0x06, // Tag & Length
+      (byte) 0xe1, 0x04, // NDEF File Identifier
+      (byte) 0x7F, (byte) 0xFF, // Maximum NDEF size
+      0x00, // NDEF file read access granted
+      (byte) 0xff, // NDEF File write access denied
+  };
 
   private enum SelectedFile {
     FILENAME_CC,
@@ -39,19 +49,19 @@ public class NFCTagType4 implements IHCEApplication {
     this.hceModel = model;
 
     this.setUpNdefContent();
-    this.setUpCapabilityContainerContent();
+    // this.setUpCapabilityContainerContent();
   }
 
   private void setUpNdefContent() {
     byte[] ndef = (new NdefEntity(prefManager.getType(), prefManager.getContent())).getNdefContent();
-    System.arraycopy(ndef,0, this.ndefDataBuffer,0,ndef.length );
+    System.arraycopy(ndef, 0, this.ndefDataBuffer, 0, ndef.length);
   }
 
-  private void setUpCapabilityContainerContent() {
-    System.arraycopy(CC_HEADER, 0, this.ccDataBuffer, 0, CC_HEADER.length);
-    byte[] controlTlv = BinaryUtils.HexStringToByteArray("0406E10480FE00" + (prefManager.getWritable() ? "00":"FF"));
-    System.arraycopy(controlTlv, 0, this.ccDataBuffer, CC_HEADER.length, controlTlv.length);
-  }
+  // private void setUpCapabilityContainerContent() {
+  //   System.arraycopy(CC_HEADER, 0, this.ccDataBuffer, 0, CC_HEADER.length);
+  //   byte[] controlTlv = BinaryUtils.HexStringToByteArray("0406E10480FE00" + (prefManager.getWritable() ? "00" : "FF"));
+  //   System.arraycopy(controlTlv, 0, this.ccDataBuffer, CC_HEADER.length, controlTlv.length);
+  // }
 
   private byte[] getFullResponseByFile() {
     switch (selectedFile) {
@@ -108,7 +118,7 @@ public class NFCTagType4 implements IHCEApplication {
     System.arraycopy(ApduHelper.R_APDU_OK, 0, response, realLength, ApduHelper.R_APDU_OK.length);
 
     this.hceModel.getLastState()
-      .setValue(HceViewModel.HCE_STATE_READ);
+        .setValue(HceViewModel.HCE_STATE_READ);
 
     return response;
   }
@@ -143,12 +153,12 @@ public class NFCTagType4 implements IHCEApplication {
       this.prefManager.setContent(nm.getContent());
       this.prefManager.setType(nm.getType());
       this.hceModel.getLastState()
-        .setValue(HceViewModel.HCE_STATE_WRITE_FULL);
+          .setValue(HceViewModel.HCE_STATE_WRITE_FULL);
       this.hceModel.getLastState()
-        .setValue(HceViewModel.HCE_STATE_UPDATE_APPLICATION);
+          .setValue(HceViewModel.HCE_STATE_UPDATE_APPLICATION);
     } else {
       this.hceModel.getLastState()
-        .setValue(HceViewModel.HCE_STATE_WRITE_PARTIAL);
+          .setValue(HceViewModel.HCE_STATE_WRITE_PARTIAL);
     }
 
     return ApduHelper.R_APDU_OK;
@@ -175,6 +185,6 @@ public class NFCTagType4 implements IHCEApplication {
   @Override
   public void onDestroy(int reason) {
     this.hceModel.getLastState()
-      .setValue(HceViewModel.HCE_STATE_DISCONNECTED);
+        .setValue(HceViewModel.HCE_STATE_DISCONNECTED);
   }
 }
